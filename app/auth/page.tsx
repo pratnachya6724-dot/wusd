@@ -7,7 +7,7 @@ import Link from 'next/link';
 type Step = 'phone' | 'otp';
 
 export default function AuthPage() {
-  const { signInWithPhoneMock, verifyOtpMock } = useAuth();
+  const { sendOtp, verifyOtp } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>('phone');
@@ -27,7 +27,7 @@ export default function AuthPage() {
     }
 
     setLoading(true);
-    const { error } = await signInWithPhoneMock(phone);
+    const { error } = await sendOtp(phone);
     setLoading(false);
 
     if (error) {
@@ -47,7 +47,7 @@ export default function AuthPage() {
     }
 
     setLoading(true);
-    const { error } = await verifyOtpMock(phone, otp, name.trim());
+    const { error } = await verifyOtp(phone, otp, name.trim());
     setLoading(false);
 
     if (error) {

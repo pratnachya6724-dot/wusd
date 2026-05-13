@@ -1,37 +1,30 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase, ADMIN_EMAIL } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
-  role: 'customer' | 'rider' | 'admin' | null;
   isAdmin: boolean;
   isRider: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
-  needsOnboarding: boolean;
-  signInWithPhoneMock: (phone: string) => Promise<{ error: Error | null }>;
-  verifyOtpMock: (phone: string, otp: string, name?: string) => Promise<{ error: Error | null }>;
+  sendOtp: (phone: string) => Promise<{ error: any; success?: boolean }>;
+  verifyOtp: (phone: string, otp: string, name?: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  signInWithEmail: (email: string, pass: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-// ใช้สำหรับจำลอง OTP และสร้าง User
-const getPseudoEmail = (phone: string) => `${phone}@wus-delivery.com`;
-const getPseudoPassword = (phone: string) => `WusPhoneMock!${phone}`;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+  const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -39,9 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
     if (!error && data) {
       setProfile(data as Profile);
-      return data as Profile;
     }
-    return null;
   }, []);
 
   useEffect(() => {
@@ -66,94 +57,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  // จำลองการส่ง OTP (จริงๆ ไม่ได้ส่ง แค่เช็คว่าผ่านไหม)
-  const signInWithPhoneMock = async (phone: string) => {
-    if (!phone || phone.length < 9) {
-      return { error: new Error('เบอร์โทรศัพท์ไม่ถูกต้อง') };
-    }
-    // ในระบบจริง จะเรียก supabase.auth.signInWithOtp({ phone })
-    return { error: null };
+  const sendOtp = async (phone: string) => {
+    // Format to E.164 (Thailand +66)
+    const formattedPhone = phone.startsWith('+') ? phone : `+66${phone.startsWith('0') ? phone.slice(1) : phone}`;
+    const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
+    if (error) return { error };
+    return { success: true };
   };
 
-  // จำลองการยืนยัน OTP โดยใช้ Email/Password จำลองสมัครหรือล็อกอิน
-  const verifyOtpMock = async (phone: string, otp: string, name: string = '') => {
-    if (otp !== '123456') {
-      return { error: new Error('รหัส OTP ไม่ถูกต้อง') };
+  const verifyOtp = async (phone: string, otp: string, name: string = '') => {
+    const formattedPhone = phone.startsWith('+') ? phone : `+66${phone.startsWith('0') ? phone.slice(1) : phone}`;
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token: otp,
+      type: 'sms'
+    });
+
+    if (error) return { error };
+
+    if (data.user) {
+      // Auto-assign admin for the specific number
+      const isInitialAdmin = phone === '0930162164';
+      
+      // Upsert profile
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        phone: phone,
+        name: name || profile?.name || 'ผู้ใช้ใหม่',
+        role: isInitialAdmin ? 'admin' : 'customer',
+        is_super_admin: isInitialAdmin
+      }, { onConflict: 'id' });
+
+      await fetchProfile(data.user.id);
     }
 
-    const email = getPseudoEmail(phone);
-    const password = getPseudoPassword(phone);
-
-    // ลอง Sign in ก่อน
-    const signInRes = await supabase.auth.signInWithPassword({ email, password });
-    
-    let finalUser: User | null = signInRes.data?.user;
-    let finalError = signInRes.error;
-    
-    // ถ้าไม่มีบัญชี ให้สมัครใหม่
-    if (finalError && finalError.message.includes('Invalid login credentials')) {
-      const signUpRes = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name: name || phone, phone } },
-      });
-      finalUser = signUpRes.data?.user;
-      finalError = signUpRes.error;
-    }
-
-    // 1 เครื่อง 1 ไอดี: บันทึก Device ID ลง LocalStorage ถ้าล็อกอินสำเร็จ
-    if (!finalError && finalUser) {
-      // ตรวจสอบ Role เดิมก่อน เพื่อไม่ให้ทับสิทธิ์ (เช่น rider)
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', finalUser.id)
-        .single();
-
-      // อัปเดต Profile ทุกครั้งที่ล็อกอินสำเร็จ เพื่อให้สิทธิ์ Admin เป็นปัจจุบัน
-        await supabase.from('profiles').upsert({
-          id: finalUser.id,
-          name: name || phone,
-          phone: phone,
-          role: phone === '0930162164' ? 'admin' : (existingProfile?.role || 'customer'),
-          is_super_admin: phone === '0930162164',
-        }, { onConflict: 'id' });
-
-      // โหลด Profile เข้า State ทันทีเพื่อป้องกัน Race Condition
-      await fetchProfile(finalUser.id);
-
-      const deviceId = localStorage.getItem('wus_device_id') || crypto.randomUUID();
-      localStorage.setItem('wus_device_id', deviceId);
-    }
-
-    return { error: finalError as Error | null };
+    return { data };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setUser(null);
   };
 
-  const signInWithEmail = async (email: string, pass: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    return { error: error as Error | null };
-  };
-
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
+  };
 
-  const role = profile?.role ?? null;
-  const isAdmin = role === 'admin' || user?.email === ADMIN_EMAIL;
-  const isRider = role === 'rider';
-  const isSuperAdmin = (profile?.is_super_admin ?? false) || user?.email === ADMIN_EMAIL;
-  const needsOnboarding = !!user && !!profile && !profile.onboarding_done;
+  const isAdmin = profile?.role === 'admin' || profile?.is_super_admin === true;
+  const isRider = profile?.role === 'rider';
+  const isSuperAdmin = profile?.is_super_admin === true;
 
   return (
     <AuthContext.Provider value={{
-      user, profile, role, isAdmin, isRider, isSuperAdmin,
-      loading, needsOnboarding, signInWithPhoneMock, verifyOtpMock,
-      signOut, refreshProfile, signInWithEmail
+      user, profile, isAdmin, isRider, isSuperAdmin, loading,
+      sendOtp, verifyOtp, signOut, refreshProfile
     }}>
       {children}
     </AuthContext.Provider>
@@ -165,4 +123,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-
