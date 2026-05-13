@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Profile, RiderApplication, Order } from '@/lib/types';
@@ -115,13 +115,26 @@ export default function AdminPage() {
   };
 
   const handleAppointAdmin = async () => {
-    if (!newAdminEmail.trim()) return;
+    const phone = newAdminEmail.trim();
+    if (!phone) return;
     setActionLoading(true);
-    const { data } = await supabase.from('profiles').select('id').eq('id',
-      (await supabase.from('profiles').select('id').eq('name', newAdminEmail.trim()).single()).data?.id || ''
-    ).single();
-    // Find by email via auth (need service role in production)
-    // For now update via email match in metadata
+    
+    // Find profile by phone
+    const { data: target, error } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('phone', phone)
+      .single();
+
+    if (error || !target) {
+      alert('ไม่พบผู้ใช้งานที่ใช้เบอร์นี้ กรุณาตรวจสอบเบอร์โทรศัพท์อีกครั้ง');
+    } else {
+      if (confirm(`ยืนยันการแต่งตั้ง ${target.name} เป็นแอดมิน?`)) {
+        await supabase.from('profiles').update({ role: 'admin' }).eq('id', target.id);
+        setNewAdminEmail('');
+        await fetchAll();
+      }
+    }
     setActionLoading(false);
   };
 
@@ -143,6 +156,21 @@ export default function AdminPage() {
     { key: 'restaurants', label: 'ร้านอาหาร', icon: '🍽️' },
     ...(isSuperAdmin ? [{ key: 'admins' as AdminTab, label: 'แอดมิน', icon: '👑' }] : []),
   ];
+
+  const handleSeedData = async () => {
+    if (!confirm('ยืนยันการลงข้อมูลตัวอย่าง? (ข้อมูลเดิมจะยังอยู่ แต่จะเพิ่มข้อมูลใหม่เข้าไป)')) return;
+    setActionLoading(true);
+    try {
+      const { seedDatabase } = await import('../../lib/seed');
+      await seedDatabase();
+      alert('ลงข้อมูลตัวอย่างสำเร็จ!');
+      await fetchAll();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="admin-page">
@@ -194,6 +222,11 @@ export default function AdminPage() {
               <Link href="/admin" onClick={() => setTab('history')} className="quick-link">
                 📋 ดูประวัติออเดอร์
               </Link>
+              {isSuperAdmin && (
+                <button onClick={handleSeedData} className="quick-link seed-btn" style={{ background: 'var(--accent-glow)', border: '1px dashed var(--accent)', cursor: 'pointer' }}>
+                  🌱 ลงข้อมูลตัวอย่าง (Seed)
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -320,6 +353,25 @@ export default function AdminPage() {
         {tab === 'admins' && isSuperAdmin && (
           <div className="admin-section">
             <h2 className="admin-section-title">👑 จัดการแอดมิน</h2>
+            
+            <div className="add-admin-form" style={{ marginBottom: 24, display: 'flex', gap: 12 }}>
+              <input
+                type="tel"
+                className="form-input"
+                placeholder="ระบุเบอร์โทรศัพท์ที่ต้องการแต่งตั้ง..."
+                value={newAdminEmail}
+                onChange={e => setNewAdminEmail(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button 
+                className="admin-btn" 
+                onClick={handleAppointAdmin}
+                disabled={actionLoading}
+              >
+                + แต่งตั้งแอดมิน
+              </button>
+            </div>
+
             <div className="admins-list">
               {admins.map(admin => (
                 <div key={admin.id} className="admin-card">

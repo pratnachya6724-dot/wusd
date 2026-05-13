@@ -23,7 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // ใช้สำหรับจำลอง OTP และสร้าง User
-const getPseudoEmail = (phone: string) => `${phone}@wus.local`;
+const getPseudoEmail = (phone: string) => `${phone}@wus-delivery.com`;
 const getPseudoPassword = (phone: string) => `WusPhoneMock!${phone}`;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
