@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isManager: boolean;
   isRider: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
@@ -125,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return { error: 'กรุณาล็อกอินก่อนใช้รหัสลับ' };
 
     const { error } = await supabase.from('profiles').update({
-      role: 'admin',
-      is_super_admin: true
+      role: 'manager',
+      is_super_admin: false // Managers are not super admins
     }).eq('id', user.id);
 
     if (!error) await fetchProfile(user.id);
@@ -138,13 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = profile?.role === 'admin' || profile?.is_super_admin === true;
+  const isManager = profile?.role === 'manager';
   const isRider = profile?.role === 'rider';
   const isSuperAdmin = profile?.is_super_admin === true;
   const needsOnboarding = !!user && !!profile && !profile.name;
 
   return (
     <AuthContext.Provider value={{
-      user, profile, isAdmin, isRider, isSuperAdmin, loading, needsOnboarding,
+      user, profile, isAdmin, isManager, isRider, isSuperAdmin, loading, needsOnboarding,
       sendOtp, verifyOtp, signOut, refreshProfile, signInWithEmail, signInWithGoogle,
       becomeAdminSecretly
     } as AuthContextType}>

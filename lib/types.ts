@@ -18,7 +18,7 @@ export interface Profile {
   phone: string | null;
   address: string | null;
   additional_info: string | null;
-  role: 'customer' | 'rider' | 'admin';
+  role: 'customer' | 'rider' | 'admin' | 'manager';
   is_super_admin: boolean;
   fcm_token: string | null;
   avatar_url: string | null;

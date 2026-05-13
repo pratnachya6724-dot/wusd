@@ -9,7 +9,7 @@ import Link from 'next/link';
 type AdminTab = 'overview' | 'riders' | 'history' | 'admins' | 'restaurants';
 
 export default function AdminPage() {
-  const { user, isAdmin, isSuperAdmin, loading } = useAuth();
+  const { user, isAdmin, isManager, isSuperAdmin, loading } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<AdminTab>('overview');
 
@@ -32,9 +32,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (!loading) {
       if (!user) router.push('/auth');
-      else if (!isAdmin) router.push('/');
+      else if (!isAdmin && !isManager) router.push('/');
     }
-  }, [loading, user, isAdmin, router]);
+  }, [loading, user, isAdmin, isManager, router]);
 
   const fetchAll = useCallback(async () => {
     // Stats
@@ -151,9 +151,9 @@ export default function AdminPage() {
 
   const TABS: { key: AdminTab; label: string; icon: string }[] = [
     { key: 'overview', label: 'ภาพรวม', icon: '📊' },
-    { key: 'riders', label: 'ไรเดอร์', icon: '🛵' },
     { key: 'history', label: 'ประวัติ', icon: '📋' },
     { key: 'restaurants', label: 'ร้านอาหาร', icon: '🍽️' },
+    ...(isAdmin ? [{ key: 'riders' as AdminTab, label: 'ไรเดอร์', icon: '🛵' }] : []),
     ...(isSuperAdmin ? [{ key: 'admins' as AdminTab, label: 'แอดมิน', icon: '👑' }] : []),
   ];
 
@@ -175,7 +175,9 @@ export default function AdminPage() {
   return (
     <div className="admin-page">
       <div className="container">
-        <h1 className="page-title">⚙️ แผงควบคุมแอดมิน</h1>
+        <h1 className="page-title">
+          {isAdmin ? '⚙️ แผงควบคุมแอดมิน' : '🏬 แผงควบคุมผู้จัดการร้าน'}
+        </h1>
 
         {/* Tabs */}
         <div className="admin-tabs">

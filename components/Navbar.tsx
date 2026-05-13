@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { user, profile, isAdmin, isRider, signOut, loading } = useAuth();
+  const { user, profile, isAdmin, isManager, isRider, signOut, loading } = useAuth();
   const { totalItems } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,7 @@ export default function Navbar() {
 
       <div className="navbar-actions">
         {/* Cart — visible to customers and guests */}
-        {!isAdmin && !isRider && (
+        {!isAdmin && !isManager && !isRider && (
           <Link href="/cart" className="cart-btn">
             🛒 ตะกร้า
             {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
@@ -51,9 +51,9 @@ export default function Navbar() {
         ) : user ? (
           <>
             {/* Admin shortcut */}
-            {isAdmin && (
+            {(isAdmin || isManager) && (
               <Link href="/admin" className="nav-link admin-link">
-                ⚙️ แอดมิน
+                ⚙️ จัดการร้านค้า
               </Link>
             )}
 
@@ -87,7 +87,7 @@ export default function Navbar() {
                   <div className="dropdown-header">
                     <p className="dropdown-name">{displayName}</p>
                     <p className="dropdown-role">
-                      {isAdmin ? '👑 แอดมิน' : isRider ? '🛵 ไรเดอร์' : '👤 ลูกค้า'}
+                      {isAdmin ? '👑 แอดมิน' : isManager ? '🏬 ผู้จัดการร้าน' : isRider ? '🛵 ไรเดอร์' : '👤 ลูกค้า'}
                     </p>
                   </div>
                   <div className="dropdown-divider" />
@@ -96,13 +96,13 @@ export default function Navbar() {
                     👤 โปรไฟล์ของฉัน
                   </Link>
 
-                  {!isAdmin && (
+                  {!isAdmin && !isManager && (
                     <Link href="/orders" className="dropdown-item" onClick={() => setMenuOpen(false)}>
                       📋 ออเดอร์ของฉัน
                     </Link>
                   )}
 
-                  {!isRider && !isAdmin && (
+                  {!isRider && !isAdmin && !isManager && (
                     <Link href="/rider/apply" className="dropdown-item" onClick={() => setMenuOpen(false)}>
                       🛵 สมัครเป็นไรเดอร์
                     </Link>
