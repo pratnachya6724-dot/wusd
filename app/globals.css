@@ -635,3 +635,53 @@ button { cursor: pointer; border: none; font-family: inherit; }
   .search-bar { padding: 14px 50px 14px 44px; font-size: 0.95rem; }
   .search-icon { left: 14px; }
 }
+
+/* Auth Divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-divider:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.auth-divider:not(:empty)::after {
+  margin-left: .5em;
+}
+
+/* Google Auth Button */
+.google-auth-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: white;
+  color: #333;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.google-auth-btn:hover {
+  background: #f1f1f1;
+  transform: translateY(-2px);
+}
+
+.google-auth-btn:active {
+  transform: translateY(0);
+}

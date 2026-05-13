@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 type Step = 'email' | 'otp';
 
 export default function AuthPage() {
-  const { sendOtp, verifyOtp } = useAuth();
+  const { sendOtp, verifyOtp, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>('email');
@@ -105,6 +105,20 @@ export default function AuthPage() {
 
             <button type="submit" className="auth-submit-btn" disabled={loading || !email}>
               {loading ? '⏳ กำลังส่งรหัส...' : 'รับรหัส OTP ทางอีเมล'}
+            </button>
+
+            <div className="auth-divider">
+              <span>หรือ</span>
+            </div>
+
+            <button
+              type="button"
+              className="google-auth-btn"
+              onClick={() => signInWithGoogle()}
+              disabled={loading}
+            >
+              <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: 18, height: 18, marginRight: 10 }} />
+              เข้าสู่ระบบด้วย Google
             </button>
           </form>
         )}
