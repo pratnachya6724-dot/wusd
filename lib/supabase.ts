@@ -32,12 +32,16 @@ export function calculateDistance(
   return R * c;
 }
 
+// Delivery Fees (Default to 10 and 5 if not set in env)
+const BASE_FEE = Number(process.env.NEXT_PUBLIC_DELIVERY_BASE_FEE || 10);
+const PER_ITEM_FEE = Number(process.env.NEXT_PUBLIC_DELIVERY_PER_KM || 5);
+
 /**
  * คำนวณค่าส่งจากจำนวนชิ้นอาหาร
- * ชิ้นแรก 10 บาท, ชิ้นต่อไป +5 บาท
+ * ชิ้นแรก = BASE_FEE, ชิ้นต่อไป + PER_ITEM_FEE
  */
 export function calcItemBasedFee(totalItems: number): number {
   if (totalItems <= 0) return 0;
-  return 10 + ((totalItems - 1) * 5);
+  return BASE_FEE + ((totalItems - 1) * PER_ITEM_FEE);
 }
 
