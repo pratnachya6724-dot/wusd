@@ -74,7 +74,7 @@ export default function Navbar() {
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt={displayName} className="user-avatar" />
                 ) : (
-                  <span className="user-avatar-placeholder">
+                  <span className="user-avatar-placeholder" style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)' }}>
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -119,7 +119,7 @@ export default function Navbar() {
           </>
         ) : (
           <Link href="/auth" className="signin-btn">
-            👤 เข้าสู่ระบบ
+            เข้าสู่ระบบ
           </Link>
         )}
       </div>
