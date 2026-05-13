@@ -11,6 +11,7 @@ interface AuthContextType {
   isRider: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
+  needsOnboarding: boolean;
   sendOtp: (email: string) => Promise<{ error: any; success?: boolean }>;
   verifyOtp: (email: string, otp: string, name?: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
@@ -110,9 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isRider = profile?.role === 'rider';
   const isSuperAdmin = profile?.is_super_admin === true;
 
+  const needsOnboarding = !!user && !!profile && !profile.name;
+
   return (
     <AuthContext.Provider value={{
-      user, profile, isAdmin, isRider, isSuperAdmin, loading,
+      user, profile, isAdmin, isRider, isSuperAdmin, loading, needsOnboarding,
       sendOtp, verifyOtp, signOut, refreshProfile
     }}>
       {children}
