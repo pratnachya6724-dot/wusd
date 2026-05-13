@@ -16,6 +16,7 @@ interface AuthContextType {
   verifyOtp: (email: string, otp: string, name?: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -102,6 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const signInWithEmail = async (email: string, pass: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    return { error };
+  };
+
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
   };
@@ -114,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, isAdmin, isRider, isSuperAdmin, loading, needsOnboarding,
-      sendOtp, verifyOtp, signOut, refreshProfile
+      sendOtp, verifyOtp, signOut, refreshProfile, signInWithEmail
     } as AuthContextType}>
       {children}
     </AuthContext.Provider>
