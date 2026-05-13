@@ -2,32 +2,31 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-type Step = 'phone' | 'otp';
+type Step = 'email' | 'otp';
 
 export default function AuthPage() {
   const { sendOtp, verifyOtp } = useAuth();
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>('phone');
-  const [phone, setPhone] = useState('');
-  const [name, setName] = useState(''); // เก็บไว้เผื่อสมัครใหม่
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (phone.length < 9) {
-      setError('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง');
+    if (!email.includes('@')) {
+      setError('กรุณากรอกอีเมลให้ถูกต้อง');
       return;
     }
 
     setLoading(true);
-    const { error } = await sendOtp(phone);
+    const { error } = await sendOtp(email);
     setLoading(false);
 
     if (error) {
@@ -47,13 +46,13 @@ export default function AuthPage() {
     }
 
     setLoading(true);
-    const { error } = await verifyOtp(phone, otp, name.trim());
+    const { error } = await verifyOtp(email, otp, name.trim());
     setLoading(false);
 
     if (error) {
       setError(error.message);
     } else {
-      router.back(); // กลับไปหน้าก่อนหน้า (เช่น หน้าร้านอาหาร หรือ หน้าแรก)
+      router.back();
     }
   };
 
@@ -64,30 +63,27 @@ export default function AuthPage() {
       </button>
 
       <div className="auth-card">
-        {/* Logo */}
         <div className="auth-logo">
           <span className="auth-logo-icon">🛵</span>
           <h1 className="auth-logo-text">WUS Delivery</h1>
         </div>
 
         <h2 className="auth-title">
-          {step === 'phone' ? 'เข้าสู่ระบบ / ลงทะเบียน' : 'ยืนยันรหัส OTP'}
+          {step === 'email' ? 'เข้าสู่ระบบด้วยอีเมล' : 'ยืนยันรหัสจากอีเมล'}
         </h2>
 
-        {/* Phone Step */}
-        {step === 'phone' && (
-          <form onSubmit={handlePhoneSubmit} className="auth-form">
+        {step === 'email' && (
+          <form onSubmit={handleEmailSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="auth-phone" className="form-label" style={{ color: '#fff' }}>เบอร์โทรศัพท์</label>
+              <label htmlFor="auth-email" className="form-label" style={{ color: '#fff' }}>อีเมล</label>
               <input
-                id="auth-phone"
-                type="tel"
-                placeholder="0812345678"
-                value={phone}
-                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                id="auth-email"
+                type="email"
+                placeholder="example@gmail.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 required
                 className="form-input"
-                autoComplete="tel"
                 style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(255,255,255,0.2)' }}
               />
             </div>
@@ -97,36 +93,30 @@ export default function AuthPage() {
               <input
                 id="auth-name"
                 type="text"
-                placeholder="ปล่อยว่างได้หากเคยใช้งานแล้ว"
+                placeholder="ระบุชื่อของคุณ"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="form-input"
-                autoComplete="name"
                 style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(255,255,255,0.2)' }}
               />
             </div>
 
             {error && <div className="auth-error">❌ {error}</div>}
 
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              disabled={loading || phone.length < 9}
-            >
-              {loading ? '⏳ กำลังดำเนินการ...' : 'ดำเนินการต่อ'}
+            <button type="submit" className="auth-submit-btn" disabled={loading || !email}>
+              {loading ? '⏳ กำลังส่งรหัส...' : 'รับรหัส OTP ทางอีเมล'}
             </button>
           </form>
         )}
 
-        {/* OTP Step */}
         {step === 'otp' && (
           <form onSubmit={handleOtpSubmit} className="auth-form">
             <div style={{ textAlign: 'center', marginBottom: 24, color: 'var(--text-secondary)' }}>
-              <p>ระบบส่งรหัส OTP ไปที่ <strong>{phone}</strong></p>
+              <p>ระบบส่งรหัส OTP 6 หลักไปที่อีเมล<br/><strong>{email}</strong></p>
+              <p style={{ fontSize: '0.8rem', marginTop: 8 }}>(กรุณาเช็คใน Inbox หรือ Junk Mail)</p>
             </div>
 
             <div className="form-group">
-              <label htmlFor="auth-otp" className="form-label" style={{ color: '#fff', textAlign: 'center' }}>รหัส OTP 6 หลัก</label>
               <input
                 id="auth-otp"
                 type="text"
@@ -142,25 +132,20 @@ export default function AuthPage() {
 
             {error && <div className="auth-error">❌ {error}</div>}
 
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              disabled={loading || otp.length < 6}
-            >
+            <button type="submit" className="auth-submit-btn" disabled={loading || otp.length < 6}>
               {loading ? '⏳ กำลังยืนยัน...' : 'ยืนยันตัวตน'}
             </button>
             
             <button
               type="button"
               className="auth-toggle-btn"
-              onClick={() => { setStep('phone'); setOtp(''); setError(''); }}
+              onClick={() => { setStep('email'); setOtp(''); setError(''); }}
               style={{ display: 'block', margin: '24px auto 0' }}
             >
-              ← เปลี่ยนเบอร์โทรศัพท์
+              ← เปลี่ยนอีเมล
             </button>
           </form>
         )}
-
       </div>
     </div>
   );

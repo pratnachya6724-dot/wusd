@@ -11,8 +11,8 @@ interface AuthContextType {
   isRider: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
-  sendOtp: (phone: string) => Promise<{ error: any; success?: boolean }>;
-  verifyOtp: (phone: string, otp: string, name?: string) => Promise<{ error: any; data?: any }>;
+  sendOtp: (email: string) => Promise<{ error: any; success?: boolean }>;
+  verifyOtp: (email: string, otp: string, name?: string) => Promise<{ error: any; data?: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -57,34 +57,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
-  const sendOtp = async (phone: string) => {
-    // Format to E.164 (Thailand +66)
-    const formattedPhone = phone.startsWith('+') ? phone : `+66${phone.startsWith('0') ? phone.slice(1) : phone}`;
-    const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
+  const sendOtp = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ 
+      email,
+      options: {
+        shouldCreateUser: true
+      }
+    });
     if (error) return { error };
     return { success: true };
   };
 
-  const verifyOtp = async (phone: string, otp: string, name: string = '') => {
-    const formattedPhone = phone.startsWith('+') ? phone : `+66${phone.startsWith('0') ? phone.slice(1) : phone}`;
+  const verifyOtp = async (email: string, otp: string, name: string = '') => {
     const { data, error } = await supabase.auth.verifyOtp({
-      phone: formattedPhone,
+      email,
       token: otp,
-      type: 'sms'
+      type: 'email'
     });
 
     if (error) return { error };
 
     if (data.user) {
-      // Auto-assign admin for the specific number
-      const isInitialAdmin = phone === '0930162164';
+      // Auto-assign admin for the specific email or phone (if we have it)
+      const isInitialAdmin = email === 'pratnachya6724@gmail.com';
       
       // Upsert profile
       await supabase.from('profiles').upsert({
         id: data.user.id,
-        phone: phone,
-        name: name || profile?.name || 'ผู้ใช้ใหม่',
-        role: isInitialAdmin ? 'admin' : 'customer',
+        email: email,
+        name: name || profile?.name || email.split('@')[0],
+        role: isInitialAdmin ? 'admin' : (profile?.role || 'customer'),
         is_super_admin: isInitialAdmin
       }, { onConflict: 'id' });
 
