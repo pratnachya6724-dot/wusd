@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error };
 
     if (data.user) {
-      // Auto-assign admin for the specific email or phone (if we have it)
       const isInitialAdmin = email === 'pratnachya6724@gmail.com';
       
       // Upsert profile
@@ -110,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = profile?.role === 'admin' || profile?.is_super_admin === true;
   const isRider = profile?.role === 'rider';
   const isSuperAdmin = profile?.is_super_admin === true;
-
   const needsOnboarding = !!user && !!profile && !profile.name;
 
   return (
